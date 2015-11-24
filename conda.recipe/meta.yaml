@@ -1,6 +1,6 @@
 package:
-  name: nbpresent
-  version: {{ environ.get('GIT_DESCRIBE_TAG', ' ')[1:] }}
+  name: nbbrowserpdf
+  version: "{{ environ.get('GIT_DESCRIBE_TAG', ' ')[1:] }}"
 
 source:
   path: ../
@@ -12,7 +12,6 @@ build:
 
 requirements:
   build:
-    - nodejs
     - python
   run:
     - python
@@ -23,10 +22,10 @@ requirements:
 
 test:
   imports:
-    - nbpresent
+    - nbbrowserpdf
 
 about:
-  summary: Next generation slides for Jupyter Notebooks
-  home: https://github.com/continuumio/nbpresent
+  summary: LaTeX-free PDF for Jupyter Notebooks
+  home: https://github.com/Anaconda-Server/nbbrowserpdf
   license_file: LICENSE
   license: BSD License

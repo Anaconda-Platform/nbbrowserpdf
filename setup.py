@@ -6,22 +6,22 @@ from setuptools import setup
 # should be loaded below
 __version__ = None
 
-with open('nbpresent/_version.py') as version:
+with open('nbbrowserpdf/_version.py') as version:
     exec(version.read())
 
 setup(
-    name="nbpresent",
+    name="nbbrowserpdf",
     version=__version__,
-    description="Next generation slides from Jupyter Notebooks",
+    description="LaTeX-free PDF generation from Jupyter Notebooks",
     author="Nicholas Bollweg",
     author_email="nbollweg@continuum.io",
     license="BSD-3-Clause",
-    url="https://github.com/ContinuumIO/nbpresent",
-    keywords="ipython jupyter inkscape markdown presentation revealjs d3",
+    url="https://github.com/Anaconda-Server/nbbrowserpdf",
+    keywords="ipython jupyter pdf",
     classifiers=["Development Status :: 4 - Beta",
                  "Framework :: IPython",
                  "Programming Language :: Python",
                  "License :: OSI Approved :: BSD License"],
-    packages=["nbpresent"],
+    packages=["nbbrowserpdf"],
     include_package_data=True,
 )

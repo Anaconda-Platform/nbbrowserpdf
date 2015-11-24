@@ -1,4 +1,4 @@
-package: nbpresent
+package: nbbrowserpdf
 
 platform:
   - linux-64

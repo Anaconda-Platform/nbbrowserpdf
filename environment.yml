@@ -73,7 +73,5 @@ dependencies:
   - ipython-genutils==0.1.0
   - jupyter-client==4.1.1
   - jupyter-core==4.0.6
-  - nbpresent (/home/weg/Documents/projects/nbpresent)==0.3.0.dev0
   - pypdf2==1.25.1
   - qgrid==0.2.0
-
