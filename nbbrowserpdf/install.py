@@ -47,11 +47,11 @@ def install(enable=False, **kwargs):
         cm.update(
             "jupyter_notebook_config", {
                 "version": 1,
-                "notebook": {
-                    "load_extensions": {"nbbrowserpdf/index": True}
-                },
                 "NotebookApp": {
                     "server_extensions": ["nbbrowserpdf"]
+                },
+                "notebook": {
+                    "load_extensions": {"nbbrowserpdf/index": True}
                 }
             }
         )
