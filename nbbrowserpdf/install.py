@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import subprocess
 from os.path import (
     abspath,
     dirname,
@@ -12,6 +13,8 @@ try:
     from inspect import signature
 except ImportError:
     from funcsigs import signature
+
+from jupyter_core.paths import jupyter_config_dir
 
 
 def install(enable=False, **kwargs):
@@ -42,19 +45,28 @@ def install(enable=False, **kwargs):
                 os.makedirs(path)
 
         cm = ConfigManager(config_dir=path)
-        print("Enabling nbbrowserpdf server component and nbextension in",
-              cm.config_dir)
+        print("Enabling nbbrowserpdf server component in", cm.config_dir)
         cm.update(
             "jupyter_notebook_config", {
                 "version": 1,
                 "NotebookApp": {
                     "server_extensions": ["nbbrowserpdf"]
                 },
-                "notebook": {
-                    "load_extensions": {"nbbrowserpdf/index": True}
-                }
             }
         )
+
+        print(
+            "Enabling nbpresent nbextension at notebook launch in {}".format(
+                jupyter_config_dir()
+            )
+        )
+
+        subprocess.check_call([
+            "jupyter",
+            "nbextension",
+            "enable",
+            "nbbrowserpdf/index"
+        ])
 
 
 if __name__ == '__main__':
