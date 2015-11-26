@@ -5,8 +5,8 @@
   <meta charset="utf-8" />
   <title>{{resources['metadata']['name']}}</title>
 
-  <script src="/components/require/require.js"></script>
-  <script src="/components/jquery/dist/jquery.min.js"></script>
+  <script src="/static/components/require/require.js"></script>
+  <script src="/static/components/jquery/dist/jquery.min.js"></script>
 
   {% for css in resources.inlining.css -%}
       <style type="text/css">

@@ -24,6 +24,7 @@ from PyPDF2 import (
 
 import nbformat
 from notebook import DEFAULT_STATIC_FILES_PATH
+import jupyter_core
 
 # the port on which to serve the fake server
 PORT = 9999
@@ -89,6 +90,15 @@ class CaptureServer(HTTPServer):
 
         raise KeyboardInterrupt()
 
+    def selector_size(self, selector):
+        # get some sizes for calculations
+        size, resources = self.session.evaluate(
+            """(function(){
+                var el = $("%s")[0];
+                return [el.clientWidth, el.clientHeight];
+            })();""" % selector)
+        return size
+
     def print_to_pdf(self, path):
         """Saves page as a pdf file.
         See qt4 QPrinter documentation for more detailed explanations
@@ -116,34 +126,31 @@ class CaptureServer(HTTPServer):
 
         printer.setOutputFileName(path)
 
-        self.session.page.setViewportSize(QtCore.QSize(*VIEWPORT))
-        content_size = self.session.main_frame.contentsSize()
-        print("CONTENT SIZE", content_size)
+        # get some sizes for calculations
+        nb_width, nb_height = self.selector_size("#notebook")
 
-        sizes, resources = self.session.evaluate(
-            """(function(){
-                var nb = $("#notebook")[0],
-                    body = $("body")[0];
-                return {
-                    notebook: [nb.clientWidth, nb.clientHeight],
-                    body: [body.clientWidth, body.clientHeight]
-                };
-            })();""")
-        print("SIZES", sizes)
-
+        # make the screen really long to fit the notebook
         self.session.page.setViewportSize(
-            QtCore.QSize(VIEWPORT[0], sizes["notebook"][1] + 40)
+            QtCore.QSize(VIEWPORT[0], nb_height + 40)
         )
 
-        ratio = paper_size[0] / sizes["body"][0]
+        body_width, body_height = self.selector_size("body")
 
+        # calculate the native size
+        ratio = paper_size[0] / body_width
+
+        # make the page really long to fit the notebook
         printer.setPaperSize(
-            QtCore.QSizeF(paper_size[0], sizes["notebook"][1] * ratio),
+            QtCore.QSizeF(paper_size[0], nb_height * ratio),
             paper_units)
 
         painter = QPainter(printer)
+
+        # this is a dark art
         painter.scale(8, 8)
+
         self.session.main_frame.render(painter)
+
         painter.end()
 
 
@@ -152,14 +159,21 @@ def pdf_capture(static_path):
         "static_path": static_path
     }
 
-    app = tornado.web.Application([
-        (r"/components/(.*)", tornado.web.StaticFileHandler, {
-            "path": os.path.join(DEFAULT_STATIC_FILES_PATH, "components")
-        }),
-        (r"/(.*)", tornado.web.StaticFileHandler, {
-            "path": settings['static_path']
-        }),
-    ], **settings)
+    handlers = []
+
+    # add the jupyter static paths
+    for path in jupyter_core.paths.jupyter_path():
+        handlers += [
+            (r"/static/(.*)", tornado.web.StaticFileHandler, {
+                "path": os.path.join(path, "static")
+            })
+        ]
+
+    handlers += [(r"/(.*)", tornado.web.StaticFileHandler, {
+        "path": settings['static_path']
+    })]
+
+    app = tornado.web.Application(handlers, **settings)
 
     server = CaptureServer(app)
     server.static_path = static_path
