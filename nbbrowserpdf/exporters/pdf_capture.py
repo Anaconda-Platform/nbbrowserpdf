@@ -8,105 +8,142 @@ from ghost import Ghost
 from ghost.bindings import (
     QPainter,
     QPrinter,
-    QtWebKit,
     QtCore,
+    QtWebKit,
 )
-
 
 import tornado.web
 from tornado.httpserver import HTTPServer
-
 from tornado.ioloop import IOLoop
 from tornado.concurrent import run_on_executor
-
-import nbformat
 
 from PyPDF2 import (
     PdfFileReader,
     PdfFileWriter,
-    PdfFileMerger,
 )
 
-from .base import DEFAULT_STATIC_FILES_PATH
+import nbformat
+from notebook import DEFAULT_STATIC_FILES_PATH
+
+# the port on which to serve the fake server
+PORT = 9999
+VIEWPORT = (1200, 900)
 
 
 class CaptureServer(HTTPServer):
     executor = futures.ThreadPoolExecutor(max_workers=1)
+    pdf_name = "notebook.pdf"
+    ipynb_name = "notebook.ipynb"
+    embed_ipynb = True
 
     def __init__(self, *args, **kwargs):
         super(CaptureServer, self).__init__(*args, **kwargs)
 
-    @run_on_executor
-    def capture(self):
-        # DO SOME MAGIC
-        ghost = Ghost(
+    def init_ghost(self):
+        return Ghost(
             log_level=logging.DEBUG
         )
-        session = ghost.start(
-            # display=True,
-            viewport_size=(1920, 1080),
-        )
-        merger = PdfFileMerger()
-        join = lambda *bits: os.path.join(self.static_path, *bits)
 
-        session.open("http://localhost:9999/index.html")
+    def init_session(self):
+        return self.ghost.start(
+            # display=True,
+            # TODO: read this off config
+            viewport_size=VIEWPORT,
+            show_scrollbars=True,
+        )
+
+    def page_ready(self):
+        self.session.wait_for_page_loaded()
+        time.sleep(1)
+
+    def post_process(self):
+        if self.embed_ipynb:
+            join = lambda *bits: os.path.join(self.static_path, *bits)
+
+            unmeta = PdfFileReader(join(self.pdf_name), "rb")
+
+            meta = PdfFileWriter()
+            meta.appendPagesFromReader(unmeta)
+
+            with open(join(self.ipynb_name), "rb") as fp:
+                meta.addAttachment(self.ipynb_name, fp.read())
+
+            with open(join("notebook.pdf"), "wb") as fp:
+                meta.write(fp)
+
+    @run_on_executor
+    def capture(self):
+        self.ghost = self.init_ghost()
+        self.session = self.init_session()
+
+        self.session.open("http://localhost:9999/index.html")
 
         try:
-            session.wait_for_selector("#nbpresent-css")
-            time.sleep(1)
+            self.page_ready()
         except Exception as err:
             print(err)
 
-        for i, slide in enumerate(self.notebook.metadata.nbpresent.slides):
-            print("\n\n\nprinting slide", i, slide)
-            filename = join("notebook-{0:04d}.pdf".format(i))
-            session.show()
-            screenshot(self.notebook, session, filename)
-            merger.append(PdfFileReader(filename, "rb"))
-            result, resources = session.evaluate(
-                """
-                console.log(window.nbpresent);
-                console.log(window.nbpresent.mode.presenter.speaker.advance());
-                """)
-            time.sleep(1)
+        self.print_to_pdf(self.pdf_name)
 
-        merger.write(join("notebook-unmeta.pdf"))
-
-        unmeta = PdfFileReader(join("notebook-unmeta.pdf"), "rb")
-
-        meta = PdfFileWriter()
-        meta.appendPagesFromReader(unmeta)
-
-        ipynb = "notebook.ipynb"
-
-        with open(join(ipynb), "rb") as fp:
-            meta.addAttachment(ipynb, fp.read())
-
-        with open(join("notebook.pdf"), "wb") as fp:
-            meta.write(fp)
+        self.post_process()
 
         raise KeyboardInterrupt()
 
-def screenshot(nb, session, dest, as_print=False):
-    """
-    big thanks to https://gist.github.com/jmaupetit/4217925
-    """
+    def print_to_pdf(self, path):
+        """Saves page as a pdf file.
+        See qt4 QPrinter documentation for more detailed explanations
+        of options.
+        :param path: The destination path.
+        :param paper_size: A 2-tuple indicating size of page to print to.
+        :param paper_margins: A 4-tuple indicating size of each margin.
+        :param paper_units: Units for pager_size, pager_margins.
+        :param zoom_factor: Scale the output content.
+        """
 
-    printer = QPrinter(mode=QPrinter.ScreenResolution)
-    printer.setOutputFormat(QPrinter.PdfFormat)
-    printer.setPaperSize(QtCore.QSizeF(1080, 1920), QPrinter.DevicePixel)
-    printer.setOrientation(QPrinter.Landscape)
-    printer.setOutputFileName(dest)
-    printer.setPageMargins(0, 0, 0, 0, QPrinter.DevicePixel)
+        # TODO: read these from notebook metadata? args?
+        paper_size = (8.5, 11.0)
+        paper_margins = (0, 0, 0, 0)
+        paper_units = QPrinter.Inch
+        resolution = 1200
 
-    if as_print:
-        webview = QtWebKit.QWebView()
-        webview.setPage(session.page)
-        webview.print_(printer)
-    else:
+        printer = QPrinter(QPrinter.HighResolution)
+        printer.setColorMode(QPrinter.Color)
+        printer.setOutputFormat(QPrinter.PdfFormat)
+        printer.setPageMargins(*(paper_margins + (paper_units,)))
+        printer.setPaperSize(QtCore.QSizeF(*paper_size), paper_units)
+        printer.setResolution(resolution)
+        printer.setFullPage(True)
+
+        printer.setOutputFileName(path)
+
+        self.session.page.setViewportSize(QtCore.QSize(*VIEWPORT))
+        content_size = self.session.main_frame.contentsSize()
+        print("CONTENT SIZE", content_size)
+
+        sizes, resources = self.session.evaluate(
+            """(function(){
+                var nb = $("#notebook")[0],
+                    body = $("body")[0];
+                return {
+                    notebook: [nb.clientWidth, nb.clientHeight],
+                    body: [body.clientWidth, body.clientHeight]
+                };
+            })();""")
+        print("SIZES", sizes)
+
+        self.session.page.setViewportSize(
+            QtCore.QSize(VIEWPORT[0], sizes["notebook"][1] + 40)
+        )
+
+        ratio = paper_size[0] / sizes["body"][0]
+
+        printer.setPaperSize(
+            QtCore.QSizeF(paper_size[0], sizes["notebook"][1] * ratio),
+            paper_units)
+
         painter = QPainter(printer)
-        painter.scale(1.45, 1.45)
-        session.main_frame.render(painter)
+        painter.scale(8, 8)
+        self.session.main_frame.render(painter)
         painter.end()
 
 
