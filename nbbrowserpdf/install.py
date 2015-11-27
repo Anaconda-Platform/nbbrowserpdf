@@ -3,6 +3,7 @@
 import argparse
 import os
 import subprocess
+import sys
 from os.path import (
     abspath,
     dirname,
@@ -42,6 +43,7 @@ def install(enable=False, **kwargs):
         if "prefix" in kwargs:
             path = join(kwargs["prefix"], "etc", "jupyter")
             if not exists(path):
+                print("Making directory", path)
                 os.makedirs(path)
 
         cm = ConfigManager(config_dir=path)
@@ -55,18 +57,23 @@ def install(enable=False, **kwargs):
             }
         )
 
+        cm = ConfigManager(config_dir=join(jupyter_config_dir(), "nbconfig"))
         print(
-            "Enabling nbpresent nbextension at notebook launch in {}".format(
-                jupyter_config_dir()
-            )
+            "Enabling nbpresent nbextension at notebook launch in",
+            cm.config_dir
         )
 
-        subprocess.check_call([
-            "jupyter",
-            "nbextension",
-            "enable",
-            "nbbrowserpdf/index"
-        ])
+        if not exists(cm.config_dir):
+            print("Making directory", cm.config_dir)
+            os.makedirs(cm.config_dir)
+
+        cm.update(
+            "notebook", {
+                "load_extensions": {
+                    "nbbrowserpdf/index": True
+                },
+            }
+        )
 
 
 if __name__ == '__main__':

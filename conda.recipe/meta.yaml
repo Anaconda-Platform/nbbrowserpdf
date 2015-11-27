@@ -13,12 +13,11 @@ build:
 requirements:
   build:
     - python
+    - pip
   run:
     - python
     - notebook
     - funcsigs
-    - pypdf2
-    - ghost.py
 
 test:
   imports:
