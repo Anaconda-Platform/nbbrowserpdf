@@ -23,5 +23,6 @@ setup(
                  "Programming Language :: Python",
                  "License :: OSI Approved :: BSD License"],
     packages=["nbbrowserpdf"],
+    install_requires=["pypdf2", "ghost.py"],
     include_package_data=True,
 )

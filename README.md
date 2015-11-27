@@ -3,7 +3,6 @@
 
 ## Installation
 > TODO: pypi package
-> TODO: conda package
 ```shell
 pip install https://github.com/Anaconda-Server/nbbrowserpdf/archive/master.zip
 python -m nbbrowserpdf.install
@@ -12,6 +11,12 @@ python -m nbbrowserpdf.install
 Enable the extension for every notebook launch:
 ```shell
 python -m nbpresent.install --enable
+```
+
+Installing with `conda` will handle the installation and enabling (in user
+space):
+```shell
+conda install --channel nbcio nbbrowserpdf
 ```
 
 ## In-Browser Usage
