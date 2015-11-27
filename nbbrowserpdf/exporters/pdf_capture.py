@@ -26,7 +26,8 @@ from PyPDF2 import (
 )
 
 import nbformat
-import jupyter_core
+from jupyter_core.paths import jupyter_path
+
 
 # the port on which to serve the fake server
 PORT = 9999
@@ -164,7 +165,7 @@ def pdf_capture(static_path):
     handlers = []
 
     # add the jupyter static paths
-    for path in jupyter_core.paths.jupyter_path():
+    for path in jupyter_path():
         handlers += [
             (r"/static/(.*)", tornado.web.StaticFileHandler, {
                 "path": os.path.join(path, "static")
