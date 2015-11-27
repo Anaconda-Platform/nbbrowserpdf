@@ -1,13 +1,8 @@
 include LICENSE
-include *.rst
 include *.md
 
-recursive-include nbpresent *
-
-exclude nbpresent/static/*.html
-exclude nbpresent/static/*.gif
+recursive-include nbbrowserpdf *
 
 recursive-exclude * __pycache__
 recursive-exclude * *.py[co]
-recursive-exclude node_modules *.*
 recursive-exclude * .git
