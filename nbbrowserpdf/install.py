@@ -43,6 +43,7 @@ def install(enable=False, **kwargs):
         if "prefix" in kwargs:
             path = join(kwargs["prefix"], "etc", "jupyter")
             if not exists(path):
+                print("Making directory", path)
                 os.makedirs(path)
 
         cm = ConfigManager(config_dir=path)
@@ -58,10 +59,14 @@ def install(enable=False, **kwargs):
 
         cm = ConfigManager(config_dir=join(jupyter_config_dir(), "nbconfig"))
         print(
-            "Enabling nbpresent nbextension at notebook launch in {}".format(
-                cm.config_dir
-            )
+            "Enabling nbpresent nbextension at notebook launch in",
+            cm.config_dir
         )
+
+        if not exists(cm.config_dir):
+            print("Making directory", cm.config_dir)
+            os.makedirs(cm.config_dir)
+
         cm.update(
             "notebook", {
                 "load_extensions": {
