@@ -19,7 +19,10 @@ _every_ time you start the notebook or _enable_ the extension for every notebook
 python -m nbpresent.install --enable
 ```
 
-## Export
+## In-Browser Usage
+In the Notebook application menu bar, click in **File** -> **Download As...** ->  **PDF via Headless Browser (.pdf)**
+
+## CLI
 > TODO: document CLI usage
 
 ## Development
