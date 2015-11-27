@@ -1,15 +1,18 @@
-from concurrent import futures
 import os
 import logging
 import time
 import sys
+
+try:
+    from concurrent import futures
+except ImportError:
+    import futures
 
 from ghost import Ghost
 from ghost.bindings import (
     QPainter,
     QPrinter,
     QtCore,
-    QtWebKit,
 )
 
 import tornado.web
@@ -23,7 +26,6 @@ from PyPDF2 import (
 )
 
 import nbformat
-from notebook import DEFAULT_STATIC_FILES_PATH
 import jupyter_core
 
 # the port on which to serve the fake server
@@ -188,7 +190,8 @@ def pdf_capture(static_path):
     try:
         ioloop.start()
     except KeyboardInterrupt:
-        print("stopped")
+        print("Successfully created PDF")
+
 
 if __name__ == "__main__":
     pdf_capture(sys.argv[1])

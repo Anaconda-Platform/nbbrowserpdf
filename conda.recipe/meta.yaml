@@ -18,10 +18,14 @@ requirements:
     - python
     - notebook
     - funcsigs
+    - pyqt
+    - futures
 
 test:
   imports:
     - nbbrowserpdf
+    - PyPDF2
+    - ghost
 
 about:
   summary: LaTeX-free PDF for Jupyter Notebooks
