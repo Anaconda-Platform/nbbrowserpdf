@@ -3,6 +3,7 @@
 import argparse
 import os
 import subprocess
+import sys
 from os.path import (
     abspath,
     dirname,
@@ -55,18 +56,19 @@ def install(enable=False, **kwargs):
             }
         )
 
+        cm = ConfigManager(config_dir=join(jupyter_config_dir(), "nbconfig"))
         print(
             "Enabling nbpresent nbextension at notebook launch in {}".format(
-                jupyter_config_dir()
+                cm.config_dir
             )
         )
-
-        subprocess.check_call([
-            "jupyter",
-            "nbextension",
-            "enable",
-            "nbbrowserpdf/index"
-        ])
+        cm.update(
+            "notebook", {
+                "load_extensions": {
+                    "nbbrowserpdf/index": True
+                },
+            }
+        )
 
 
 if __name__ == '__main__':
