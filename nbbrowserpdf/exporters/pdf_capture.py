@@ -1,7 +1,8 @@
+import argparse
 import os
 import logging
 import time
-import sys
+from importlib import import_module
 
 try:
     from concurrent import futures
@@ -31,86 +32,51 @@ from jupyter_core.paths import jupyter_path
 
 # the port on which to serve the fake server
 PORT = 9999
+
+# a notional default viewport...
 VIEWPORT = (1200, 900)
+
+# the version of the notebook format to use... some autodetect would be nice
+IPYNB_VERSION = 4
 
 
 class CaptureServer(HTTPServer):
+    """ A tornado server that handles serving up static HTTP assets. When the
+        assets are ready, `capture` is called
+
+        This should be subclassed to provide specific behavior: see
+        nbpresent.exporters.pdf_capture (from which this was refactored)
+    """
     executor = futures.ThreadPoolExecutor(max_workers=1)
     pdf_name = "notebook.pdf"
     ipynb_name = "notebook.ipynb"
     embed_ipynb = True
 
-    def __init__(self, *args, **kwargs):
-        super(CaptureServer, self).__init__(*args, **kwargs)
-
-    def init_ghost(self):
-        return Ghost(
-            log_level=logging.DEBUG
-        )
-
-    def init_session(self):
-        return self.ghost.start(
-            # display=True,
-            # TODO: read this off config
-            viewport_size=VIEWPORT,
-            show_scrollbars=True,
-        )
-
-    def page_ready(self):
-        self.session.wait_for_page_loaded()
-        time.sleep(1)
-
-    def post_process(self):
-        if self.embed_ipynb:
-            join = lambda *bits: os.path.join(self.static_path, *bits)
-
-            unmeta = PdfFileReader(join(self.pdf_name), "rb")
-
-            meta = PdfFileWriter()
-            meta.appendPagesFromReader(unmeta)
-
-            with open(join(self.ipynb_name), "rb") as fp:
-                meta.addAttachment(self.ipynb_name, fp.read())
-
-            with open(join("notebook.pdf"), "wb") as fp:
-                meta.write(fp)
-
     @run_on_executor
     def capture(self):
+        """ The main control flow for the capture process.
+        """
         self.ghost = self.init_ghost()
         self.session = self.init_session()
 
-        self.session.open("http://localhost:9999/index.html")
+        self.session.open("http://localhost:{}/index.html".format(PORT))
 
         try:
             self.page_ready()
         except Exception as err:
             print(err)
 
-        self.print_to_pdf(self.pdf_name)
+        self.print_to_pdf(self.in_static(self.pdf_name))
 
         self.post_process()
 
         raise KeyboardInterrupt()
 
-    def selector_size(self, selector):
-        # get some sizes for calculations
-        size, resources = self.session.evaluate(
-            """(function(){
-                var el = $("%s")[0];
-                return [el.clientWidth, el.clientHeight];
-            })();""" % selector)
-        return size
-
-    def print_to_pdf(self, path):
-        """Saves page as a pdf file.
-        See qt4 QPrinter documentation for more detailed explanations
-        of options.
-        :param path: The destination path.
-        :param paper_size: A 2-tuple indicating size of page to print to.
-        :param paper_margins: A 4-tuple indicating size of each margin.
-        :param paper_units: Units for pager_size, pager_margins.
-        :param zoom_factor: Scale the output content.
+    def print_to_pdf(self, filename):
+        """ Saves page as a pdf file.
+            See qt4 QPrinter documentation for more detailed explanations
+            of options.
+            :param filename: The destination path.
         """
 
         # TODO: read these from notebook metadata? args?
@@ -127,7 +93,7 @@ class CaptureServer(HTTPServer):
         printer.setResolution(resolution)
         printer.setFullPage(True)
 
-        printer.setOutputFileName(path)
+        printer.setOutputFileName(filename)
 
         # get some sizes for calculations
         nb_width, nb_height = self.selector_size("#notebook")
@@ -156,13 +122,77 @@ class CaptureServer(HTTPServer):
 
         painter.end()
 
+    def selector_size(self, selector):
+        """ get the screen size of an element
+        """
+        size, resources = self.session.evaluate(
+            """(function(){
+                var el = document.querySelector("%s");
+                return [el.clientWidth, el.clientHeight];
+            })();""" % selector)
+        return size
 
-def pdf_capture(static_path):
+    def in_static(self, *bits):
+        """ return a path added to the current static path
+        """
+        return os.path.join(self.static_path, *bits)
+
+    def init_ghost(self):
+        """ Create ghost instance... could be used to customize ghost/qt
+            behavior
+        """
+        return Ghost(
+            log_level=logging.DEBUG
+        )
+
+    def init_session(self):
+        """ Create a ghost session
+        """
+        return self.ghost.start(
+            # display=True,
+            # TODO: read this off config
+            viewport_size=VIEWPORT,
+            show_scrollbars=False,
+        )
+
+    def page_ready(self):
+        """ A delay to allow for all static assets to be loaded. Some still
+            seem to sneak through, thus the additional, hacky 3 second delay.
+            On a slow connection, this could *still* create problems.
+        """
+        self.session.wait_for_page_loaded()
+        time.sleep(3)
+
+    def post_process(self):
+        """ After the PDF has been created, allow for manipulating the document.
+            The default is to embed the ipynb in the PDF.
+        """
+        if self.embed_ipynb:
+            unmeta = PdfFileReader(self.in_static(self.pdf_name), "rb")
+
+            meta = PdfFileWriter()
+            meta.appendPagesFromReader(unmeta)
+
+            with open(self.in_static(self.ipynb_name), "rb") as fp:
+                meta.addAttachment(self.ipynb_name, fp.read())
+
+            with open(self.in_static(self.pdf_name), "wb") as fp:
+                meta.write(fp)
+
+
+def pdf_capture(static_path, capture_server_class=None):
+    """ Starts a tornado server which serves all of the jupyter path locations
+        as well as the working directory
+    """
     settings = {
         "static_path": static_path
     }
 
-    handlers = []
+    handlers = [
+        (r"/(.*)", tornado.web.StaticFileHandler, {
+            "path": settings['static_path']
+        })
+    ]
 
     # add the jupyter static paths
     for path in jupyter_path():
@@ -172,27 +202,47 @@ def pdf_capture(static_path):
             })
         ]
 
-    handlers += [(r"/(.*)", tornado.web.StaticFileHandler, {
-        "path": settings['static_path']
-    })]
-
     app = tornado.web.Application(handlers, **settings)
 
-    server = CaptureServer(app)
+    if capture_server_class is None:
+        server = CaptureServer(app)
+    else:
+        _module, _klass = capture_server_class.split(":")
+        server = getattr(import_module(_module), _klass)(app)
+
+    # can't pass this to the constructor for some reason...
     server.static_path = static_path
 
+    # add the parsed, normalized notebook
     with open(os.path.join(static_path, "notebook.ipynb")) as fp:
-        server.notebook = nbformat.read(fp, 4)
+        server.notebook = nbformat.read(fp, IPYNB_VERSION)
 
     ioloop = IOLoop()
+    # server.capture will be called when the ioloop is bored for the first time
     ioloop.add_callback(server.capture)
-    server.listen(9999)
+    # connect to a port
+    server.listen(PORT)
 
     try:
+        # run forever
         ioloop.start()
     except KeyboardInterrupt:
+        # this is probably not the best way to escape, but works for now
         print("Successfully created PDF")
 
 
 if __name__ == "__main__":
-    pdf_capture(sys.argv[1])
+    parser = argparse.ArgumentParser(
+        description="Generate a PDF from a directory of notebook assets")
+
+    parser.add_argument(
+        "static_path",
+        help="The directory to generate: must contain an index.html"
+    )
+
+    parser.add_argument(
+        "--capture-server-class",
+        help="Alternate server class with entry_point notation, e.g."
+             "some.module:ServerClass")
+
+    pdf_capture(**parser.parse_args().__dict__)

@@ -13,7 +13,15 @@ class BrowserPDFExporter(HTMLExporter):
     """ An exporter that generates PDF with a headless browser.
         Heavily influenced by the nbconvert LaTeX-based PDFExporter.
     """
+    def pdf_capture_args(self):
+        """ extra arguments to pass to pdf_capture... such as
+            --capture-server-class
+        """
+        return []
+
     def from_notebook_node(self, nb, resources=None, **kw):
+        """ Generate a PDF from a given parsed notebook node
+        """
         output, resources = super(BrowserPDFExporter, self).from_notebook_node(
             nb, resources=resources, **kw
         )
@@ -39,7 +47,7 @@ class BrowserPDFExporter(HTMLExporter):
                 sys.executable,
                 "-m", "nbbrowserpdf.exporters.pdf_capture",
                 td
-            ])
+            ] + self.pdf_capture_args())
 
             pdf_file = "notebook.pdf"
 
@@ -54,7 +62,7 @@ class BrowserPDFExporter(HTMLExporter):
         # convert output extension to pdf
         # the writer above required it to be tex
         resources['output_extension'] = '.pdf'
-        # clear figure outputs, extracted by html export,
+        # clear figure outputs, extracted by pdf export,
         # so we don't claim to be a multi-file export.
         resources.pop('outputs', None)
 

@@ -2,14 +2,13 @@
 
 import argparse
 import os
-import subprocess
-import sys
 from os.path import (
     abspath,
     dirname,
     exists,
     join,
 )
+from pprint import pprint
 try:
     from inspect import signature
 except ImportError:
@@ -19,15 +18,15 @@ from jupyter_core.paths import jupyter_config_dir
 
 
 def install(enable=False, **kwargs):
-    """Install the nbbrowserpdf nbextension assets and optionally enables the
-       nbextension and server extension for every run.
+    """ Install the nbbrowserpdf nbextension assets and optionally enables the
+        nbextension and server extension for every run.
 
-    Parameters
-    ----------
-    enable: bool
-        Enable the extension on every notebook launch
-    **kwargs: keyword arguments
-        Other keyword arguments passed to the install_nbextension command
+        Parameters
+        ----------
+        enable: bool
+            Enable the extension on every notebook launch
+        **kwargs: keyword arguments
+            Other keyword arguments passed to the install_nbextension command
     """
     from notebook.nbextensions import install_nbextension
     from notebook.services.config import ConfigManager
@@ -48,14 +47,19 @@ def install(enable=False, **kwargs):
 
         cm = ConfigManager(config_dir=path)
         print("Enabling nbbrowserpdf server component in", cm.config_dir)
-        cm.update(
-            "jupyter_notebook_config", {
-                "version": 1,
-                "NotebookApp": {
-                    "server_extensions": ["nbbrowserpdf"]
-                },
-            }
+        cfg = cm.get("jupyter_notebook_config")
+        print("Existing config...")
+        pprint(cfg)
+        server_extensions = (
+            cfg.setdefault("NotebookApp", {})
+            .setdefault("server_extensions", [])
         )
+        if "nbbrowserpdf" not in server_extensions:
+            cfg["NotebookApp"]["server_extensions"] += ["nbbrowserpdf"]
+
+        cm.update("jupyter_notebook_config", cfg)
+        print("New config...")
+        pprint(cm.get("jupyter_notebook_config"))
 
         cm = ConfigManager(config_dir=join(jupyter_config_dir(), "nbconfig"))
         print(
@@ -83,23 +87,18 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(
         description="Installs nbbrowserpdf nbextension")
+
     parser.add_argument(
         "-e", "--enable",
         help="Automatically load server and nbextension on notebook launch",
         action="store_true")
 
-    default_kwargs = dict(
-        action="store",
-        nargs="?"
-    )
-
-    store_true_kwargs = dict(action="store_true")
-
-    store_true = ["symlink", "overwrite", "quiet", "user"]
-
+    # inherit the arguments of the upstream install_nbextension
     [parser.add_argument(
         "--{}".format(arg),
-        **(store_true_kwargs if arg in store_true else default_kwargs)
+        **(dict(action="store_true")
+           if arg in ["symlink", "overwrite", "quiet", "user"] else
+           dict(action="store", nargs="?"))
         )
         for arg in install_kwargs]
 
