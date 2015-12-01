@@ -15,7 +15,7 @@ try:
 except ImportError:
     from funcsigs import signature
 
-from jupyter_core.paths import jupyter_config_dir
+from jupyter_core.paths import jupyter_config_dir, ENV_CONFIG_PATH
 
 
 def install(enable=False, **kwargs):
