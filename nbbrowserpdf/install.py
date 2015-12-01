@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import sys
 from os.path import (
     abspath,
     dirname,
@@ -61,7 +62,12 @@ def install(enable=False, **kwargs):
         print("New config...")
         pprint(cm.get("jupyter_notebook_config"))
 
-        cm = ConfigManager(config_dir=join(jupyter_config_dir(), "nbconfig"))
+        if "conda" in sys.modules:
+            _jupyter_config_dir = ENV_CONFIG_PATH[0]
+        else:
+            _jupyter_config_dir = jupyter_config_dir()
+
+        cm = ConfigManager(config_dir=join(_jupyter_config_dir, "nbconfig"))
         print(
             "Enabling nbpresent nbextension at notebook launch in",
             cm.config_dir
