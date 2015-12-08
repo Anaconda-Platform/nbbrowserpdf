@@ -24,7 +24,20 @@ In the Notebook application menu bar, click in **File** -> **Download As...**
 -> **PDF via Headless Browser (.pdf)**.
 
 ## CLI
-> TODO: document CLI usage
+You can generate a PDF at the command line:
+```shell
+nbbrowserpdf -i Notebook.ipynb -o Notebook.pdf
+```
+
+`nbbrowserpdf` will also work with streams
+```shell
+cmd_that_makes_ipynb | nbbrowserpdf > output.pdf
+```
+
+You can also see the whole documentation
+```shell
+nbbrowserpdf --help
+```
 
 ## Development
 > TODO: document development processes

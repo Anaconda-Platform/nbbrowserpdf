@@ -66,7 +66,7 @@ def install(enable=False, **kwargs):
             subprocess.call(["conda", "info", "--root"])
             print("conda detected")
             _jupyter_config_dir = ENV_CONFIG_PATH[0]
-        except OSError as e:
+        except OSError:
             print("conda not detected")
             _jupyter_config_dir = jupyter_config_dir()
 

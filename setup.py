@@ -27,4 +27,7 @@ setup(
     packages=["nbbrowserpdf"],
     install_requires=["pypdf2", "ghost.py"],
     include_package_data=True,
+    entry_points={
+        'console_scripts': ['nbbrowserpdf=nbbrowserpdf.export:main'],
+    }
 )
