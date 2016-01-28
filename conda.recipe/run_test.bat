@@ -1,0 +1,1 @@
+"%PREFIX%\python" nosetests nbbrowserpdf

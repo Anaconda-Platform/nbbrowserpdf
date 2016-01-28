@@ -2,9 +2,9 @@
 > LaTeX-free PDF generation for Jupyter Notebooks
 
 ## Installation
-> TODO: pypi package
+### `pip`
 ```shell
-pip install https://github.com/Anaconda-Server/nbbrowserpdf/archive/master.zip
+pip install nbbrowserpdf
 python -m nbbrowserpdf.install
 ```
 
@@ -13,11 +13,13 @@ Enable the extension for every notebook launch:
 python -m nbpresent.install --enable
 ```
 
-Installing with `conda` will handle the installation and enabling (in user
-space):
+### `conda`
 ```shell
 conda install --channel nbcio nbbrowserpdf
 ```
+Installing with `conda` will handle the installation and enabling in your conda
+environment.
+
 
 ## In-Browser Usage
 In the Notebook application menu bar, click in **File** -> **Download As...**

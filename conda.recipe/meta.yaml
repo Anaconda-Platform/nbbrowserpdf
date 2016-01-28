@@ -23,8 +23,16 @@ requirements:
     - nb_config_manager
 
 test:
-  imports:
-    - nbbrowserpdf
+  requires:
+    - python
+    - notebook
+    - funcsigs
+    - pyqt
+    - futures
+    - nb_config_manager
+    - nose
+    - coverage
+
 
 about:
   summary: LaTeX-free PDF for Jupyter Notebooks

@@ -30,14 +30,13 @@ import nbformat
 from jupyter_core.paths import jupyter_path
 
 
-# the port on which to serve the fake server
-PORT = 9999
-
 # a notional default viewport...
 VIEWPORT = (1200, 900)
 
 # the version of the notebook format to use... some autodetect would be nice
 IPYNB_VERSION = 4
+
+ADDRESS = "127.0.0.1"
 
 
 class CaptureServer(HTTPServer):
@@ -56,10 +55,11 @@ class CaptureServer(HTTPServer):
     def capture(self):
         """ The main control flow for the capture process.
         """
+        host, port = list(self._sockets.values())[0].getsockname()
         self.ghost = self.init_ghost()
         self.session = self.init_session()
 
-        self.session.open("http://localhost:{}/index.html".format(PORT))
+        self.session.open("http://{}:{}/index.html".format(host, port))
 
         try:
             self.page_ready()
@@ -221,7 +221,7 @@ def pdf_capture(static_path, capture_server_class=None):
     # server.capture will be called when the ioloop is bored for the first time
     ioloop.add_callback(server.capture)
     # connect to a port
-    server.listen(PORT)
+    server.listen(port=0, address=ADDRESS)
 
     try:
         # run forever
