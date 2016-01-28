@@ -1,1 +1,1 @@
-"${PREFIX}/bin/nosetests" nbbrowserpdf
+"${PREFIX}/bin/python" nosetests nbbrowserpdf

@@ -1,1 +1,1 @@
-"%PREFIX%\python" nosetests nbbrowserpdf
+"%PREFIX%\python.exe" nosetests nbbrowserpdf
