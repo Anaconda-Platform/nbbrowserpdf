@@ -16,6 +16,7 @@ requirements:
   build:
     - python
     - pip
+    - system # [linux32]
   run:
     - python
     - notebook
@@ -34,7 +35,7 @@ test:
     - nb_config_manager
     - nose
     - coverage
-    - system [linux-32]
+    - system # [linux32]
 
 
 about:
