@@ -66,7 +66,7 @@ def install(enable=False, **kwargs):
 
         cm = ConfigManager(config_dir=join(path, "nbconfig"))
         print(
-            "Enabling nbpresent nbextension at notebook launch in",
+            "Enabling nbbrowserpdf nbextension at notebook launch in",
             cm.config_dir
         )
 
