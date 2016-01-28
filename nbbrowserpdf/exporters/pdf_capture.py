@@ -1,7 +1,7 @@
 import argparse
 import os
-import logging
-import time
+import sys
+import subprocess
 from importlib import import_module
 
 try:
@@ -9,34 +9,32 @@ try:
 except ImportError:
     import futures
 
-from ghost import Ghost
-from ghost.bindings import (
-    QPainter,
-    QPrinter,
-    QtCore,
-)
 
 import tornado.web
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 from tornado.concurrent import run_on_executor
-
-from PyPDF2 import (
-    PdfFileReader,
-    PdfFileWriter,
-)
+from tornado.log import enable_pretty_logging
 
 import nbformat
 from jupyter_core.paths import jupyter_path
 
+from .base import (
+    HTML_NAME,
+    IPYNB_NAME,
+)
 
-# a notional default viewport...
-VIEWPORT = (1200, 900)
+ADDRESS = "127.0.0.1"
 
 # the version of the notebook format to use... some autodetect would be nice
 IPYNB_VERSION = 4
 
-ADDRESS = "127.0.0.1"
+
+class WorkCompleteInterrupt(KeyboardInterrupt):
+    """ For some reason, only KeyboardInterrupt works cross-platform to kill
+        tornado from inside. Probably bad.
+    """
+    pass
 
 
 class CaptureServer(HTTPServer):
@@ -47,137 +45,25 @@ class CaptureServer(HTTPServer):
         nbpresent.exporters.pdf_capture (from which this was refactored)
     """
     executor = futures.ThreadPoolExecutor(max_workers=1)
-    pdf_name = "notebook.pdf"
-    ipynb_name = "notebook.ipynb"
-    embed_ipynb = True
+    ghost_class = "nbbrowserpdf.exporters.pdf_ghost"
+
+    @property
+    def capture_url(self):
+        return "http://{1}:{2}/{0}".format(
+            HTML_NAME,
+            *list(self._sockets.values())[0].getsockname())
 
     @run_on_executor
     def capture(self):
-        """ The main control flow for the capture process.
+        """ Fire off the capture subprocess, then shut down the server
         """
-        host, port = list(self._sockets.values())[0].getsockname()
-        self.ghost = self.init_ghost()
-        self.session = self.init_session()
+        subprocess.Popen([
+            sys.executable, "-m", self.ghost_class,
+            self.capture_url,
+            self.static_path
+        ], stdout=subprocess.PIPE).communicate()
 
-        self.session.open("http://{}:{}/index.html".format(host, port))
-
-        try:
-            self.page_ready()
-        except Exception as err:
-            print(err)
-
-        self.print_to_pdf(self.in_static(self.pdf_name))
-
-        self.post_process()
-
-        raise KeyboardInterrupt()
-
-    def print_to_pdf(self, filename):
-        """ Saves page as a pdf file.
-            See qt4 QPrinter documentation for more detailed explanations
-            of options.
-            :param filename: The destination path.
-        """
-
-        # TODO: read these from notebook metadata? args?
-        paper_size = (8.5, 11.0)
-        paper_margins = (0, 0, 0, 0)
-        paper_units = QPrinter.Inch
-        resolution = 1200
-
-        printer = QPrinter(QPrinter.HighResolution)
-        printer.setColorMode(QPrinter.Color)
-        printer.setOutputFormat(QPrinter.PdfFormat)
-        printer.setPageMargins(*(paper_margins + (paper_units,)))
-        printer.setPaperSize(QtCore.QSizeF(*paper_size), paper_units)
-        printer.setResolution(resolution)
-        printer.setFullPage(True)
-
-        printer.setOutputFileName(filename)
-
-        # get some sizes for calculations
-        nb_width, nb_height = self.selector_size("#notebook")
-
-        # make the screen really long to fit the notebook
-        self.session.page.setViewportSize(
-            QtCore.QSize(VIEWPORT[0], nb_height + 40)
-        )
-
-        body_width, body_height = self.selector_size("body")
-
-        # calculate the native size
-        ratio = paper_size[0] / body_width
-
-        # make the page really long to fit the notebook
-        printer.setPaperSize(
-            QtCore.QSizeF(paper_size[0], nb_height * ratio),
-            paper_units)
-
-        painter = QPainter(printer)
-
-        # this is a dark art
-        painter.scale(8, 8)
-
-        self.session.main_frame.render(painter)
-
-        painter.end()
-
-    def selector_size(self, selector):
-        """ get the screen size of an element
-        """
-        size, resources = self.session.evaluate(
-            """(function(){
-                var el = document.querySelector("%s");
-                return [el.clientWidth, el.clientHeight];
-            })();""" % selector)
-        return size
-
-    def in_static(self, *bits):
-        """ return a path added to the current static path
-        """
-        return os.path.join(self.static_path, *bits)
-
-    def init_ghost(self):
-        """ Create ghost instance... could be used to customize ghost/qt
-            behavior
-        """
-        return Ghost(
-            log_level=logging.DEBUG
-        )
-
-    def init_session(self):
-        """ Create a ghost session
-        """
-        return self.ghost.start(
-            # display=True,
-            # TODO: read this off config
-            viewport_size=VIEWPORT,
-            show_scrollbars=False,
-        )
-
-    def page_ready(self):
-        """ A delay to allow for all static assets to be loaded. Some still
-            seem to sneak through, thus the additional, hacky 3 second delay.
-            On a slow connection, this could *still* create problems.
-        """
-        self.session.wait_for_page_loaded()
-        time.sleep(3)
-
-    def post_process(self):
-        """ After the PDF has been created, allow for manipulating the document.
-            The default is to embed the ipynb in the PDF.
-        """
-        if self.embed_ipynb:
-            unmeta = PdfFileReader(self.in_static(self.pdf_name), "rb")
-
-            meta = PdfFileWriter()
-            meta.appendPagesFromReader(unmeta)
-
-            with open(self.in_static(self.ipynb_name), "rb") as fp:
-                meta.addAttachment(self.ipynb_name, fp.read())
-
-            with open(self.in_static(self.pdf_name), "wb") as fp:
-                meta.write(fp)
+        raise WorkCompleteInterrupt()
 
 
 def pdf_capture(static_path, capture_server_class=None):
@@ -214,7 +100,7 @@ def pdf_capture(static_path, capture_server_class=None):
     server.static_path = static_path
 
     # add the parsed, normalized notebook
-    with open(os.path.join(static_path, "notebook.ipynb")) as fp:
+    with open(os.path.join(static_path, IPYNB_NAME)) as fp:
         server.notebook = nbformat.read(fp, IPYNB_VERSION)
 
     ioloop = IOLoop()
@@ -224,11 +110,9 @@ def pdf_capture(static_path, capture_server_class=None):
     server.listen(port=0, address=ADDRESS)
 
     try:
-        # run forever
         ioloop.start()
-    except KeyboardInterrupt:
-        # this is probably not the best way to escape, but works for now
-        print("Successfully created PDF")
+    except WorkCompleteInterrupt:
+        pass
 
 
 if __name__ == "__main__":
@@ -237,7 +121,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "static_path",
-        help="The directory to generate: must contain an index.html"
+        help="The directory to generate: must contain an {}".format(HTML_NAME)
     )
 
     parser.add_argument(
