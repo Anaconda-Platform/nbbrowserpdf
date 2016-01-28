@@ -1,1 +1,1 @@
-"${PREFIX}/bin/python" -m nosetests nbbrowserpdf
+"${PREFIX}/bin/python" -m nose nbbrowserpdf.tests

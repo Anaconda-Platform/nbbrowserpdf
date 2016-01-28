@@ -1,1 +1,1 @@
-"%PREFIX%\python.exe" -m nosetests nbbrowserpdf
+"%PREFIX%\python.exe" -m nose nbbrowserpdf.tests
