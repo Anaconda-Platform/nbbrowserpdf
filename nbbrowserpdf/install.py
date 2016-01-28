@@ -45,6 +45,8 @@ def install(enable=False, **kwargs):
             if not exists(path):
                 print("Making directory", path)
                 os.makedirs(path)
+        else:
+            path = jupyter_config_dir()
 
         cm = ConfigManager(config_dir=path)
         print("Enabling nbbrowserpdf server component in", cm.config_dir)
@@ -62,15 +64,7 @@ def install(enable=False, **kwargs):
         print("New config...")
         pprint(cm.get("jupyter_notebook_config"))
 
-        try:
-            subprocess.call(["conda", "info", "--root"])
-            print("conda detected")
-            _jupyter_config_dir = ENV_CONFIG_PATH[0]
-        except OSError:
-            print("conda not detected")
-            _jupyter_config_dir = jupyter_config_dir()
-
-        cm = ConfigManager(config_dir=join(_jupyter_config_dir, "nbconfig"))
+        cm = ConfigManager(config_dir=join(path, "nbconfig"))
         print(
             "Enabling nbpresent nbextension at notebook launch in",
             cm.config_dir
