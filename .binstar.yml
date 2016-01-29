@@ -27,4 +27,4 @@ engine:
   - python=2.7
 
 before_script:
-  - export DISPLAY=:99.0
+  - which xvfb

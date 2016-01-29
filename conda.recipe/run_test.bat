@@ -1,1 +1,1 @@
-"%PREFIX%\python.exe" -m nose nbbrowserpdf.tests
+"%PREFIX%\python.exe" -c "import nbbrowserpdf"
