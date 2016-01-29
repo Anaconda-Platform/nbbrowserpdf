@@ -19,7 +19,9 @@ build_targets: conda
 
 ---
 
-platform: linux
+platform:
+  - linux-32
+  - linux-64
 
 before_script:
   - export DISPLAY=:99.0
