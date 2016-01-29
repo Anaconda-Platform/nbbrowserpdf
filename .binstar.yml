@@ -14,17 +14,3 @@ script:
   - conda build conda.recipe -c anaconda-nb-extensions
 
 build_targets: conda
-
----
-
-platform:
-  - linux-32
-  - linux-64
-
-engine:
-  - python=3.5
-  - python=3.4
-  - python=2.7
-
-before_script:
-  - which xvfb
