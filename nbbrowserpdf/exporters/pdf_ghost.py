@@ -52,8 +52,7 @@ class NotebookPDFGhost(object):
             # display=True,
             # TODO: read this off config
             viewport_size=VIEWPORT,
-            show_scrollbars=False,
-            display=True
+            show_scrollbars=False
         )
 
     def render(self):
