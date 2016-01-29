@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-import logging
+# import logging
 import time
 import os
 
@@ -53,6 +53,7 @@ class NotebookPDFGhost(object):
             # TODO: read this off config
             viewport_size=VIEWPORT,
             show_scrollbars=False,
+            display=True
         )
 
     def render(self):
@@ -158,6 +159,7 @@ def main(url, static_path):
 
     pdf_ghost.render()
 
+
 if __name__ == "__main__":
     parser = ArgumentParser(
         description="Generate a PDF from a directory of notebook assets")
@@ -171,5 +173,4 @@ if __name__ == "__main__":
         "static_path",
         help="The directory to generate: must contain an index.html"
     )
-
     main(**parser.parse_args().__dict__)
