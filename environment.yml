@@ -4,8 +4,12 @@ channels:
 - bokeh
 - mutirri
 - javascript
+- anaconda-nb-extensions
 
 dependencies:
+- pip:
+  - bqplot
+  - qgrid
 - anaconda-client
 - bokeh
 - clyent
@@ -15,6 +19,7 @@ dependencies:
 - flask
 - freetype
 - funcsigs
+- ghost.py
 - ipykernel
 - ipython
 - ipython_genutils
@@ -33,8 +38,8 @@ dependencies:
 - mistune
 - nbconvert
 - nbformat
-- notebook
 - nose
+- notebook
 - numpy
 - openssl
 - pandas
@@ -44,6 +49,7 @@ dependencies:
 - pip
 - pygments
 - pyparsing
+- pypdf2
 - pyqt
 - python
 - python-dateutil
@@ -65,8 +71,3 @@ dependencies:
 - yaml
 - zeromq
 - zlib
-- pip:
-  - bqplot
-  - ghost.py
-  - pypdf2
-  - qgrid

@@ -18,20 +18,24 @@ requirements:
     - pip
     - system # [linux32]
   run:
-    - python
-    - notebook
-    - pyqt
+    - ghost.py
     - nb_config_manager
+    - notebook
+    - pypdf2
+    - pyqt
+    - python
     - funcsigs # [not py3k]
     - futures # [not py3k]
 test:
   requires:
-    - python
-    - notebook
+    - coverage
+    - ghost.py
     - nb_config_manager
     - nose
-    - coverage
+    - notebook
+    - pypdf2
     - pyqt
+    - python
     - system # [linux32]
     - funcsigs # [not py3k]
     - futures # [not py3k]

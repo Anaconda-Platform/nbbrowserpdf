@@ -1,5 +1,3 @@
-package: nbbrowserpdf
-
 platform:
   - linux-64
   - linux-32
