@@ -3,6 +3,8 @@ from argparse import ArgumentParser
 import time
 import os
 
+import nbformat
+
 from ghost import Ghost
 from ghost.bindings import (
     QPainter,
@@ -17,12 +19,27 @@ from PyPDF2 import (
 
 from .base import (
     IPYNB_NAME,
-    PDF_NAME
+    PDF_NAME,
+    IPYNB_VERSION,
 )
 
 
 # a notional default viewport...
 VIEWPORT = (1200, 900)
+
+
+parser = ArgumentParser(
+    description="Generate a PDF from a directory of notebook assets")
+
+parser.add_argument(
+    "url",
+    help="The url to capture"
+)
+
+parser.add_argument(
+    "static_path",
+    help="The directory to generate: must contain an index.html"
+)
 
 
 class NotebookPDFGhost(object):
@@ -33,6 +50,9 @@ class NotebookPDFGhost(object):
     def __init__(self, url, static_path):
         self.url = url
         self.static_path = static_path
+
+        with open(self.in_static(IPYNB_NAME)) as fp:
+            self.notebook = nbformat.read(fp, IPYNB_VERSION)
 
         self.ghost = self.init_ghost()
         self.session = self.init_session()
@@ -160,16 +180,4 @@ def main(url, static_path):
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser(
-        description="Generate a PDF from a directory of notebook assets")
-
-    parser.add_argument(
-        "url",
-        help="The url to capture"
-    )
-
-    parser.add_argument(
-        "static_path",
-        help="The directory to generate: must contain an index.html"
-    )
     main(**parser.parse_args().__dict__)

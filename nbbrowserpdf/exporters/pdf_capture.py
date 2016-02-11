@@ -2,6 +2,7 @@ import argparse
 import os
 import sys
 import subprocess
+import signal
 from importlib import import_module
 
 try:
@@ -14,7 +15,6 @@ import tornado.web
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 from tornado.concurrent import run_on_executor
-from tornado.log import enable_pretty_logging
 
 import nbformat
 from jupyter_core.paths import jupyter_path
@@ -24,17 +24,26 @@ from .base import (
     IPYNB_NAME,
 )
 
+signal.signal(signal.SIGINT, signal.SIG_DFL)
+
 ADDRESS = "127.0.0.1"
 
 # the version of the notebook format to use... some autodetect would be nice
 IPYNB_VERSION = 4
 
 
-class WorkCompleteInterrupt(KeyboardInterrupt):
-    """ For some reason, only KeyboardInterrupt works cross-platform to kill
-        tornado from inside. Probably bad.
-    """
-    pass
+parser = argparse.ArgumentParser(
+    description="Generate a PDF from a directory of notebook assets")
+
+parser.add_argument(
+    "static_path",
+    help="The directory to generate: must contain an {}".format(HTML_NAME)
+)
+
+parser.add_argument(
+    "--capture-server-class",
+    help="Alternate server class with entry_point notation, e.g."
+         "some.module:ServerClass")
 
 
 class CaptureServer(HTTPServer):
@@ -45,7 +54,7 @@ class CaptureServer(HTTPServer):
         nbpresent.exporters.pdf_capture (from which this was refactored)
     """
     executor = futures.ThreadPoolExecutor(max_workers=1)
-    ghost_class = "nbbrowserpdf.exporters.pdf_ghost"
+    ghost_cmd = "nbbrowserpdf.exporters.pdf_ghost"
 
     @property
     def capture_url(self):
@@ -58,15 +67,16 @@ class CaptureServer(HTTPServer):
         """ Fire off the capture subprocess, then shut down the server
         """
         subprocess.Popen([
-            sys.executable, "-m", self.ghost_class,
+            sys.executable, "-m", self.ghost_cmd,
             self.capture_url,
             self.static_path
         ], stdout=subprocess.PIPE).communicate()
 
-        raise WorkCompleteInterrupt()
+        sys.exit(0)
 
 
-def pdf_capture(static_path, capture_server_class=None):
+def pdf_capture(static_path, capture_server_class=None,
+                capture_ghost_class=None):
     """ Starts a tornado server which serves all of the jupyter path locations
         as well as the working directory
     """
@@ -109,24 +119,8 @@ def pdf_capture(static_path, capture_server_class=None):
     # connect to a port
     server.listen(port=0, address=ADDRESS)
 
-    try:
-        ioloop.start()
-    except WorkCompleteInterrupt:
-        pass
+    ioloop.start()
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description="Generate a PDF from a directory of notebook assets")
-
-    parser.add_argument(
-        "static_path",
-        help="The directory to generate: must contain an {}".format(HTML_NAME)
-    )
-
-    parser.add_argument(
-        "--capture-server-class",
-        help="Alternate server class with entry_point notation, e.g."
-             "some.module:ServerClass")
-
     pdf_capture(**parser.parse_args().__dict__)
