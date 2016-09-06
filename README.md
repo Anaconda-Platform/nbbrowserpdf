@@ -10,7 +10,7 @@ python -m nbbrowserpdf.install
 
 Enable the extension for every notebook launch:
 ```shell
-python -m nbpresent.install --enable
+python -m nbbrowserpdf.install --enable
 ```
 
 Installing with `conda` will handle the installation and enabling (in user
