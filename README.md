@@ -16,7 +16,7 @@ python -m nbbrowserpdf.install --enable
 Installing with `conda` will handle the installation and enabling (in user
 space):
 ```shell
-conda install --channel nbcio nbbrowserpdf
+conda install --channel anaconda-nb-extensions nbbrowserpdf
 ```
 
 ## In-Browser Usage
